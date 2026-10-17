@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>Misi Kucing Coder</title>
+<title>Misi Kucing Koder</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -335,8 +335,8 @@ const sfx={
 
 /* ========== Penyimpanan ringan ========== */
 const S={stars:{},pts:{},name:''};
-try{const j=JSON.parse(localStorage.getItem('misi-kucing-coder')||'{}');S.stars=j.stars||{};S.pts=j.pts||{};S.name=j.name||''}catch(e){}
-function save(){try{localStorage.setItem('misi-kucing-coder',JSON.stringify(S))}catch(e){}}
+try{const j=JSON.parse(localStorage.getItem('misi-kucing-koder')||'{}');S.stars=j.stars||{};S.pts=j.pts||{};S.name=j.name||''}catch(e){}
+function save(){try{localStorage.setItem('misi-kucing-koder',JSON.stringify(S))}catch(e){}}
 const totalPts=()=>Object.values(S.pts).reduce((a,b)=>a+b,0);
 const totalStars=()=>Object.values(S.stars).reduce((a,b)=>a+b,0);
 function updHud(){$('#xp').textContent=totalPts()+' poin'}
@@ -875,7 +875,7 @@ const byId=id=>LEVELS.find(l=>l.id===id);
 function home(){
   teardown();updHud();
   const next=LEVELS.find(l=>!S.stars[l.id]);
-  app.innerHTML=`<section class="hero"><div><h1>Misi Kucing Coder</h1>
+  app.innerHTML=`<section class="hero"><div><h1>Misi Kucing Koder</h1>
     <p>Bantu si kucing menyelesaikan 5 level algoritma pemrograman, lalu uji semuanya di game penutup.</p>
     <div class="namerow"><label for="nm">Nama</label><input id="nm" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"></div>
     <div class="row"><button type="button" class="btn primary" id="startBtn">${next&&next.id>1?'Lanjutkan Level '+next.id:'Mulai Misi'}</button><button type="button" class="btn" id="cardBtn">Kartu hasil</button><span class="pill">${totalStars()} dari 18 bintang</span></div></div>
@@ -893,7 +893,7 @@ function home(){
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function resultText(){
   const d=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-  return ['Misi Kucing Coder - KKA Kelas VIII','Nama: '+(S.name||'-'),'Tanggal: '+d,'',...LEVELS.map(l=>`${l.id}. ${l.name}: ${S.stars[l.id]||0}/3 bintang, ${S.pts[l.id]||0} poin`),'',`Total: ${totalStars()}/18 bintang, ${totalPts()} poin`].join('\n');
+  return ['Misi Kucing Koder - KKA Kelas VIII','Nama: '+(S.name||'-'),'Tanggal: '+d,'',...LEVELS.map(l=>`${l.id}. ${l.name}: ${S.stars[l.id]||0}/3 bintang, ${S.pts[l.id]||0} poin`),'',`Total: ${totalStars()}/18 bintang, ${totalPts()} poin`].join('\n');
 }
 function cardScreen(){
   teardown();
@@ -958,7 +958,7 @@ function ending(){
   $('.bigcat').style.width='110px';$('#m').onclick=home;$('#k').onclick=cardScreen;
 }
 
-$('#homeBtn').innerHTML=catSVG()+'<span>Misi Kucing Coder</span>';
+$('#homeBtn').innerHTML=catSVG()+'<span>Misi Kucing Koder</span>';
 $('#homeBtn').onclick=home;
 $('#snd').onclick=e=>{soundOn=!soundOn;e.currentTarget.setAttribute('aria-pressed',String(soundOn));e.currentTarget.textContent='Suara: '+(soundOn?'nyala':'mati');if(soundOn)sfx.tick()};
 home();
