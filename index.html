@@ -1846,9 +1846,9 @@
     /* ===== PENGATURAN GURU =====
        Tempel URL Web App Google Apps Script di bawah ini agar leaderboard otomatis (tanpa login).
        Kosongkan ('') untuk memakai mode kode setor. Panduan: PANDUAN-LEADERBOARD.md */
-    const LB_URL = 'https://script.google.com/macros/s/AKfycbyJxigYCuZSFKdi6bXPUn3kH6_UKZIxrdVnQw6Wbc79lEAPKkwbit7X0D8ldjmfT0lsZQ/exec';
-    const S = {stars: {}, pts: {}, name: '', session: '', board: [], kelas: ''};
-    try {const j = JSON.parse(localStorage.getItem('misi-kucing-koder') || '{}'); S.stars = j.stars || {}; S.pts = j.pts || {}; S.name = j.name || ''; S.session = j.session || ''; S.board = j.board || []; S.kelas = j.kelas || ''} catch (e) { }
+    const LB_URL = 'https://script.google.com/macros/s/AKfycbwMMmf1c4a4I-ZX-p1HlOtjo_pIDXFuplRjL6ANOxle8isDyDft5s29ifJ2UTWnm4NB4Q/exec';
+    const S = {stars: {}, pts: {}, name: '', session: '', board: [], kelas: '', kelasOk: ''};
+    try {const j = JSON.parse(localStorage.getItem('misi-kucing-koder') || '{}'); S.stars = j.stars || {}; S.pts = j.pts || {}; S.name = j.name || ''; S.session = j.session || ''; S.board = j.board || []; S.kelas = j.kelas || ''; S.kelasOk = j.kelasOk || ''} catch (e) { }
     function save() {try {localStorage.setItem('misi-kucing-koder', JSON.stringify(S))} catch (e) { } }
     const totalPts = () => Object.values(S.pts).reduce((a, b) => a + b, 0);
     const totalStars = () => Object.values(S.stars).reduce((a, b) => a + b, 0);
@@ -2421,7 +2421,7 @@
               explain: 'Teks dan blok menyampaikan instruksi yang sama. Blok tinggal dipilih dan disusun, sedangkan teks harus ditulis dengan sintaks yang benar.'
             })
           },
-          Q({tag: 'Analogi', prompt: 'Analogi kding adalah seperti?', options: ['Memberi resep masakan kepada koki', 'Mengobrol santai dengan teman', 'Menggambar bebas di buku tulis', 'Menonton video di ponsel'], answer: 0, explain: 'Resep harus berurutan dan jelas, sama seperti instruksi untuk komputer.', hint: 'Pikirkan: pihak yang menerima hanya mengikuti langkah yang tertulis.'}),
+          Q({tag: 'Analogi', prompt: 'Analogi koding adalah seperti?', options: ['Memberi resep masakan kepada koki', 'Mengobrol santai dengan teman', 'Menggambar bebas di buku tulis', 'Menonton video di ponsel'], answer: 0, explain: 'Resep harus berurutan dan jelas, sama seperti instruksi untuk komputer.', hint: 'Pikirkan: pihak yang menerima hanya mengikuti langkah yang tertulis.'}),
           Q({tag: 'Cari kesalahan', prompt: 'Kode Python ini gagal dijalankan. Apa penyebabnya?', code: '<pre>print("Halo, dunia)</pre>', options: ['Tanda kutip penutup hilang (syntax error)', 'Komputer sedang lambat', 'Python tidak bisa mencetak teks', 'Kode harus dibuat dengan blok'], answer: 0, explain: 'Koding berbasis teks sangat sensitif terhadap tanda baca. Satu tanda kutip yang hilang sudah cukup membuat program error.', hint: 'Hitung tanda kutip pada kode itu.'}),
           {
             run: assembleStep({
@@ -2568,7 +2568,9 @@
       const e = {name: n, pts: totalPts(), stars: totalStars(), t: Date.now()};
       if (i >= 0) S.board[i] = e; else S.board.push(e); save();
     }
-    const kelasKey = () => String(S.kelas || '').trim().toUpperCase().slice(0, 20);
+    const kelasNorm = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
+    const kelasKey = () => kelasNorm(S.kelas);
+    const locked = () => totalPts() > 0;
     function submitScore() {
       upsertLocal();
       const n = S.name.trim(), k = kelasKey();
@@ -2602,49 +2604,53 @@
       });
       save(); return {ok, bad, total: found.length};
     }
-    function requireName() {
-      if (!S.name.trim()) {
-        const m = $('#nmmsg'); if (m) m.textContent = 'Isi namamu dulu supaya skormu tercatat di leaderboard.';
-        const i = $('#nm'); if (i) i.focus(); return false;
-      }
-      if (LB_URL && !kelasKey()) {
-        const m = $('#nmmsg'); if (m) m.textContent = 'Isi kelasmu dulu (contoh: 8A) supaya masuk leaderboard kelasmu.';
-        const i = $('#kl'); if (i) i.focus(); return false;
-      }
-      return true;
+    async function requireName() {
+      const m = $('#nmmsg'), say = t => {if (m) m.textContent = t};
+      if (!S.name.trim()) {say('Isi namamu dulu supaya skormu tercatat di leaderboard.'); const i = $('#nm'); if (i) i.focus(); return false}
+      if (!LB_URL) return true;
+      const k = kelasKey();
+      if (!k) {say('Isi kode kelas dari gurumu dulu.'); const i = $('#kl'); if (i) i.focus(); return false}
+      if (S.kelasOk === k) return true;
+      say('Memeriksa kode kelas...');
+      try {
+        const res = await fetch(LB_URL + (LB_URL.includes('?') ? '&' : '?') + 'cek=' + encodeURIComponent(k) + '&_=' + Date.now());
+        const j = await res.json();
+        if (j && j.ok) {S.kelasOk = k; S.kelas = k; save(); say(''); return true}
+        say('Kode kelas tidak dikenal. Tanyakan kode yang benar ke gurumu.');
+      } catch (e) {say('Kode belum bisa diperiksa. Periksa koneksi internet lalu coba lagi.')}
+      const i = $('#kl'); if (i) i.focus(); return false;
     }
     function home() {
       teardown(); screen = 'home'; updHud();
       const next = LEVELS.find(l => !S.stars[l.id]);
       app.innerHTML = `<section class="hero"><div><h1>Misi Kucing Koder</h1>
     <p>Bantu si kucing menyelesaikan 5 level algoritma pemrograman, lalu uji semuanya di game penutup.</p>
-    <div class="namerow"><label for="nm">Nama</label><input id="nm" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"><button type="button" class="btn small" id="newp">Pemain baru</button></div>
-    ${LB_URL ? `<div class="namerow"><label for="kl">Kelas</label><input id="kl" type="text" maxlength="20" placeholder="Contoh: 8A" autocomplete="off" value="${esc(S.kelas)}"></div>` : ''}
-    <p class="nmmsg" id="nmmsg" aria-live="polite"></p>
+    <div class="namerow"><label for="nm">Nama</label><input id="nm" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"${locked() ? ' readonly' : ''}><button type="button" class="btn small" id="newp">Pemain baru</button></div>
+    ${LB_URL ? `<div class="namerow"><label for="kl">Kode kelas</label><input id="kl" type="text" maxlength="20" placeholder="Dari gurumu" autocomplete="off" value="${esc(S.kelas)}"${locked() ? ' readonly' : ''}></div>` : ''}
+    <p class="nmmsg" id="nmmsg" aria-live="polite">${locked() ? 'Nama dan kode kelas terkunci setelah kamu bermain. Untuk mengganti, tekan Pemain baru.' : ''}</p>
     <div class="row"><button type="button" class="btn primary" id="startBtn">${next && next.id > 1 ? 'Lanjutkan Level ' + next.id : 'Mulai Misi'}</button><button type="button" class="btn" id="boardBtn">Leaderboard</button><button type="button" class="btn" id="cardBtn">Kartu hasil</button><span class="pill">${totalStars()} dari 18 bintang</span></div></div>
     <div class="bw">${catSVG('bigcat')}</div></section>
     <div><div class="mapnote" style="margin-bottom:10px">Pilih level</div><ol class="stack" id="stack"></ol></div>`;
       const stack = $('#stack');
       LEVELS.forEach(l => {
         const li = h(`<li><button type="button" class="lv k-${l.k}"><span class="no">${l.id === 6 ? '&#9733;' : l.id}</span><span><span class="nm">${l.name}</span><br><span class="sb">${l.sub}</span></span>${starsHTML(S.stars[l.id] || 0)}</button></li>`);
-        $('button', li).onclick = () => {if (requireName()) intro(l)}; stack.appendChild(li);
+        $('button', li).onclick = () => {requireName().then(ok => {if (ok) intro(l)})}; stack.appendChild(li);
       });
-      $('#startBtn').onclick = () => {if (requireName()) intro(next || LEVELS[0])};
+      $('#startBtn').onclick = () => {requireName().then(ok => {if (ok) intro(next || LEVELS[0])})};
       $('#cardBtn').onclick = cardScreen; $('#boardBtn').onclick = boardScreen;
       $('#nm').oninput = e => {S.name = e.target.value; save(); const m = $('#nmmsg'); if (m && S.name.trim()) m.textContent = ''};
-      $('#nm').onchange = () => submitScore();
-      const kl = $('#kl'); if (kl) {kl.oninput = e => {S.kelas = e.target.value; save()}; kl.onchange = () => submitScore()}
+      const kl = $('#kl'); if (kl) {kl.oninput = e => {S.kelas = e.target.value; S.kelasOk = ''; save()}}
       const np = $('#newp'); let armed = 0, tm = 0;
       np.onclick = () => {
         if (!armed) {armed = 1; np.textContent = 'Yakin? Progres perangkat ini dihapus'; np.classList.add('danger'); tm = setTimeout(() => {armed = 0; np.textContent = 'Pemain baru'; np.classList.remove('danger')}, 4000); return }
-        clearTimeout(tm); S.stars = {}; S.pts = {}; S.name = ''; save(); home();
+        clearTimeout(tm); S.stars = {}; S.pts = {}; S.name = ''; S.kelasOk = ''; save(); home();
       };
     }
     function boardRows() {return S.board.slice().sort((a, b) => b.pts - a.pts || b.stars - a.stars || String(a.name).localeCompare(String(b.name)))}
     function boardOnline() {
       teardown(); screen = 'board'; const k = kelasKey();
       app.innerHTML = `<section class="card"><div class="boardhead"><h2>Leaderboard${k ? ' kelas ' + esc(k) : ''}</h2><span class="pill" id="cnt"></span></div>
-    <div class="namerow" style="margin:6px 0 10px"><label for="kk">Kelas</label><input id="kk" type="text" maxlength="20" placeholder="8A" value="${esc(S.kelas)}"><button type="button" class="btn small" id="lihat">Lihat</button></div>
+    <div class="namerow" style="margin:6px 0 10px"><label for="kk">Kode kelas</label><input id="kk" type="text" maxlength="20" placeholder="8A" value="${esc(S.kelas)}"><button type="button" class="btn small" id="lihat">Lihat</button></div>
     <p class="bnote" id="st" aria-live="polite">Memuat...</p><div class="tablewrap" id="bt"></div>
     <details class="guru"><summary>Untuk guru: hapus skor / reset kelas</summary>
       <input id="pw" type="password" autocomplete="off" style="padding:9px 12px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:inherit">
@@ -2670,7 +2676,7 @@
         t.appendChild(tb); $('#bt').replaceChildren(t); $('#cnt').textContent = rows.length + ' pemain';
       }
       async function load() {
-        const kk = String($('#kk').value || '').trim().toUpperCase();
+        const kk = kelasNorm($('#kk').value);
         if (!kk) {st.textContent = 'Isi kode kelas dulu.'; return }
         try {
           const res = await fetch(LB_URL + (LB_URL.includes('?') ? '&' : '?') + 'kelas=' + encodeURIComponent(kk) + '&_=' + Date.now());
@@ -2681,7 +2687,7 @@
       $('#lihat').onclick = load; $('#rf').onclick = load; load(); timer = setInterval(load, 10000);
       const gd = $('details.guru'); gd.ontoggle = () => $('#bt').classList.toggle('tmode', gd.open);
       async function delRow(nm) {
-        const kk = String($('#kk').value || '').trim().toUpperCase(), pw = $('#pw').value;
+        const kk = kelasNorm($('#kk').value), pw = $('#pw').value;
         if (!pw) {bf.className = 'fb bad'; bf.textContent = 'Isi kata sandi guru dulu untuk menghapus.'; $('#pw').focus(); return }
         try {await fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'del', kelas: kk, nama: nm, kunci: pw})})} catch (e) { }
         setTimeout(async () => {await load(); bf.className = 'fb'; bf.textContent = 'Perintah hapus dikirim. Jika baris masih ada, kata sandi salah.'}, 1200);
@@ -2690,7 +2696,7 @@
       rb.onclick = async () => {
         if (!armed) {armed = 1; rb.textContent = 'Klik lagi untuk menghapus semua'; rb.classList.add('danger'); tm = setTimeout(() => {armed = 0; rb.textContent = 'Reset leaderboard kelas'; rb.classList.remove('danger')}, 4000); return }
         clearTimeout(tm); armed = 0; rb.textContent = 'Reset leaderboard kelas'; rb.classList.remove('danger');
-        const kk = String($('#kk').value || '').trim().toUpperCase(), pw = $('#pw').value;
+        const kk = kelasNorm($('#kk').value), pw = $('#pw').value;
         if (!kk || !pw) {bf.className = 'fb bad'; bf.textContent = 'Isi kode kelas dan kata sandi guru.'; return }
         try {await fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'reset', kelas: kk, kunci: pw})})} catch (e) { }
         setTimeout(async () => {await load(); bf.className = 'fb'; bf.textContent = 'Perintah reset dikirim. Jika papan belum kosong, kata sandi salah.'}, 1200);
@@ -2758,7 +2764,7 @@
     function cardScreen() {
       teardown();
       app.innerHTML = `<section class="card"><h2 class="ph" style="font-size:26px">Kartu hasil</h2><p style="color:var(--muted);margin:4px 0 12px">Salin teks ini lalu kirim ke gurumu. Kode setor di bagian bawah dipakai guru untuk memasukkan skormu ke leaderboard.</p>
-    <div class="namerow" style="margin:0 0 12px"><label for="nm2">Nama</label><input id="nm2" class="nm2" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"></div>
+    <div class="namerow" style="margin:0 0 12px"><label for="nm2">Nama</label><input id="nm2" class="nm2" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"${locked() ? ' readonly' : ''}></div>
     <pre class="rc" id="rc"></pre><div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="cp">Salin hasil</button><button type="button" class="btn" id="bk">Kembali</button></div><div class="fb" id="cf" aria-live="polite"></div></section>`;
       const show = () => $('#rc').textContent = resultText(); show();
       $('#nm2').oninput = e => {S.name = e.target.value; save(); show()};
