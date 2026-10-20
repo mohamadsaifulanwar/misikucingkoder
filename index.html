@@ -2626,7 +2626,7 @@
       app.innerHTML = `<section class="hero"><div><h1>Misi Kucing Koder</h1>
     <p>Bantu si kucing menyelesaikan 5 level algoritma pemrograman, lalu uji semuanya di game penutup.</p>
     <div class="namerow"><label for="nm">Nama</label><input id="nm" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"${locked() ? ' readonly' : ''}><button type="button" class="btn small" id="newp">Pemain baru</button></div>
-    ${LB_URL ? `<div class="namerow"><label for="kl">Kode kelas</label><input id="kl" type="text" maxlength="20" placeholder="Dari gurumu" autocomplete="off" value="${esc(S.kelas)}"${locked() ? ' readonly' : ''}></div>` : ''}
+    ${LB_URL ? `<div class="namerow"><label for="kl">Kode kelas</label><input id="kl" type="text" maxlength="20" placeholder="Tanyakan gurumu" autocomplete="off" value="${esc(S.kelas)}"${locked() ? ' readonly' : ''}></div>` : ''}
     <p class="nmmsg" id="nmmsg" aria-live="polite">${locked() ? 'Nama dan kode kelas terkunci setelah kamu bermain. Untuk mengganti, tekan Pemain baru.' : ''}</p>
     <div class="row"><button type="button" class="btn primary" id="startBtn">${next && next.id > 1 ? 'Lanjutkan Level ' + next.id : 'Mulai Misi'}</button><button type="button" class="btn" id="boardBtn">Leaderboard</button><button type="button" class="btn" id="cardBtn">Kartu hasil</button><span class="pill">${totalStars()} dari 18 bintang</span></div></div>
     <div class="bw">${catSVG('bigcat')}</div></section>
@@ -2764,7 +2764,7 @@
     function cardScreen() {
       teardown();
       app.innerHTML = `<section class="card"><h2 class="ph" style="font-size:26px">Kartu hasil</h2><p style="color:var(--muted);margin:4px 0 12px">Salin teks ini lalu kirim ke gurumu. Kode setor di bagian bawah dipakai guru untuk memasukkan skormu ke leaderboard.</p>
-    <div class="namerow" style="margin:0 0 12px"><label for="nm2">Nama</label><input id="nm2" class="nm2" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"${locked() ? ' readonly' : ''}></div>
+    <div class="namerow" style="margin:0 0 12px"><label for="nm2">Nama Lengkap</label><input id="nm2" class="nm2" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"${locked() ? ' readonly' : ''}></div>
     <pre class="rc" id="rc"></pre><div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="cp">Salin hasil</button><button type="button" class="btn" id="bk">Kembali</button></div><div class="fb" id="cf" aria-live="polite"></div></section>`;
       const show = () => $('#rc').textContent = resultText(); show();
       $('#nm2').oninput = e => {S.name = e.target.value; save(); show()};
