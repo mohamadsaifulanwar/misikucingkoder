@@ -2421,7 +2421,7 @@
               explain: 'Teks dan blok menyampaikan instruksi yang sama. Blok tinggal dipilih dan disusun, sedangkan teks harus ditulis dengan sintaks yang benar.'
             })
           },
-          Q({tag: 'Analogi', prompt: 'Menurut materi, koding paling mirip dengan apa?', options: ['Memberi resep masakan kepada koki baru', 'Mengobrol santai dengan teman', 'Menggambar bebas di buku tulis', 'Menonton video di ponsel'], answer: 0, explain: 'Resep harus berurutan dan jelas, sama seperti instruksi untuk komputer.', hint: 'Pikirkan: pihak yang menerima hanya mengikuti langkah yang tertulis.'}),
+          Q({tag: 'Analogi', prompt: 'Analogi kding adalah seperti?', options: ['Memberi resep masakan kepada koki', 'Mengobrol santai dengan teman', 'Menggambar bebas di buku tulis', 'Menonton video di ponsel'], answer: 0, explain: 'Resep harus berurutan dan jelas, sama seperti instruksi untuk komputer.', hint: 'Pikirkan: pihak yang menerima hanya mengikuti langkah yang tertulis.'}),
           Q({tag: 'Cari kesalahan', prompt: 'Kode Python ini gagal dijalankan. Apa penyebabnya?', code: '<pre>print("Halo, dunia)</pre>', options: ['Tanda kutip penutup hilang (syntax error)', 'Komputer sedang lambat', 'Python tidak bisa mencetak teks', 'Kode harus dibuat dengan blok'], answer: 0, explain: 'Koding berbasis teks sangat sensitif terhadap tanda baca. Satu tanda kutip yang hilang sudah cukup membuat program error.', hint: 'Hitung tanda kutip pada kode itu.'}),
           {
             run: assembleStep({
@@ -2647,7 +2647,6 @@
     <div class="namerow" style="margin:6px 0 10px"><label for="kk">Kelas</label><input id="kk" type="text" maxlength="20" placeholder="8A" value="${esc(S.kelas)}"><button type="button" class="btn small" id="lihat">Lihat</button></div>
     <p class="bnote" id="st" aria-live="polite">Memuat...</p><div class="tablewrap" id="bt"></div>
     <details class="guru"><summary>Untuk guru: hapus skor / reset kelas</summary>
-      <label for="pw" class="bnote" style="display:block;margin:10px 0 6px">Kata sandi guru (diatur di Apps Script). Isi kata sandi, lalu tekan Hapus pada baris siswa, atau reset seluruh kelas. Hanya guru yang punya kata sandi.</label>
       <input id="pw" type="password" autocomplete="off" style="padding:9px 12px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:inherit">
       <div class="row" style="margin-top:10px"><button type="button" class="btn" id="rb">Reset leaderboard kelas</button></div></details>
     <div class="row" style="margin-top:14px"><button type="button" class="btn" id="bk">Kembali</button><button type="button" class="btn" id="rf">Segarkan</button></div>
