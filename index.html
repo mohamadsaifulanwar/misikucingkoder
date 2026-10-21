@@ -1845,7 +1845,7 @@
     /* ========== Penyimpanan ringan ========== */
     /* ===== PENGATURAN GURU =====
        Tempel URL Web App Google Apps Script di bawah ini agar leaderboard otomatis (tanpa login).
-       Kosongkan ('') untuk memakai mode kode setor. Panduan: PANDUAN-LEADERBOARD.md */
+       Kosongkan ('') jika belum memasang leaderboard online (skor hanya tersimpan di perangkat ini). Panduan: PANDUAN-LEADERBOARD.md */
     const LB_URL = 'https://script.google.com/macros/s/AKfycbwMMmf1c4a4I-ZX-p1HlOtjo_pIDXFuplRjL6ANOxle8isDyDft5s29ifJ2UTWnm4NB4Q/exec';
     const S = {stars: {}, pts: {}, name: '', session: '', board: [], kelas: '', kelasOk: ''};
     try {const j = JSON.parse(localStorage.getItem('misi-kucing-koder') || '{}'); S.stars = j.stars || {}; S.pts = j.pts || {}; S.name = j.name || ''; S.session = j.session || ''; S.board = j.board || []; S.kelas = j.kelas || ''; S.kelasOk = j.kelasOk || ''} catch (e) { }
@@ -2577,33 +2577,6 @@
       if (!LB_URL || !n || !k || !totalPts()) return;
       try {fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'set', kelas: k, nama: n, poin: totalPts(), bintang: totalStars()})}).catch(() => { })} catch (e) { }
     }
-    /* Kode setor: siswa menyalin kode, guru menempelkannya di leaderboard (tanpa login, tanpa server) */
-    const CODE_RE = /MKC~([A-Za-z0-9_-]+)~([0-9a-f]{6})/g;
-    function fnv(str) {let x = 0x811c9dc5; for (let i = 0; i < str.length; i++) {x ^= str.charCodeAt(i); x = Math.imul(x, 0x01000193) >>> 0} return x.toString(16).padStart(8, '0').slice(0, 6)}
-    const b64e = t => btoa(unescape(encodeURIComponent(t))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const b64d = t => {t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return decodeURIComponent(escape(atob(t)))};
-    function makeCode() {
-      const j = JSON.stringify({n: S.name.trim().slice(0, 40), p: totalPts(), s: totalStars(), l: [1, 2, 3, 4, 5, 6].map(i => S.stars[i] || 0), t: Date.now()});
-      const b = b64e(j); return 'MKC~' + b + '~' + fnv('kucing-koder:' + b);
-    }
-    function readCode(b, c) {
-      if (fnv('kucing-koder:' + b) !== c) return null;
-      try {
-        const o = JSON.parse(b64d(b));
-        if (typeof o.n !== 'string' || !o.n.trim() || !Number.isFinite(o.p) || !Number.isFinite(o.s)) return null;
-        return {name: o.n.trim().slice(0, 40), pts: Math.max(0, Math.min(2000, Math.round(o.p))), stars: Math.max(0, Math.min(18, Math.round(o.s))), t: Number(o.t) || 0};
-      } catch (e) {return null}
-    }
-    function importCodes(text) {
-      let ok = 0, bad = 0; const found = [...String(text).matchAll(CODE_RE)];
-      found.forEach(m => {
-        const e = readCode(m[1], m[2]); if (!e) {bad++; return }
-        const i = S.board.findIndex(x => x.name.toLowerCase() === e.name.toLowerCase());
-        if (i < 0) S.board.push(e); else if (e.t >= (S.board[i].t || 0)) S.board[i] = e;
-        ok++;
-      });
-      save(); return {ok, bad, total: found.length};
-    }
     async function requireName() {
       const m = $('#nmmsg'), say = t => {if (m) m.textContent = t};
       if (!S.name.trim()) {say('Isi namamu dulu supaya skormu tercatat di leaderboard.'); const i = $('#nm'); if (i) i.focus(); return false}
@@ -2706,12 +2679,8 @@
       if (LB_URL) return boardOnline();
       teardown(); screen = 'board';
       app.innerHTML = `<section class="card"><div class="boardhead"><h2>Leaderboard</h2><span class="pill">${S.board.length} pemain</span></div>
-    <p class="bnote">Skor dikumpulkan lewat kode, jadi tidak perlu login. Siswa menyalin teks dari <b>Kartu hasil</b> (sudah memuat kode setor) dan mengirimnya ke guru. Guru menempelkannya di bawah.</p>
+    <p class="bnote">Leaderboard online belum diatur, jadi papan ini hanya memuat skor di perangkat ini.</p>
     <div class="tablewrap" id="bt"></div>
-    <details class="guru" id="gd"><summary>Untuk guru: tambah skor siswa</summary>
-      <label for="paste" class="bnote" style="display:block;margin:10px 0 6px">Tempel kode siswa. Boleh banyak sekaligus, atau seluruh isi chat yang memuat kode.</label>
-      <textarea id="paste" rows="5" placeholder="MKC~..."></textarea>
-      <div class="row" style="margin-top:10px"><button type="button" class="btn primary" id="add">Tambahkan ke leaderboard</button></div></details>
     <div class="row" style="margin-top:14px" id="ba"><button type="button" class="btn" id="bk">Kembali</button><button type="button" class="btn" id="cpb">Salin papan</button><button type="button" class="btn" id="rb">Reset leaderboard</button></div>
     <div class="fb" id="bf" aria-live="polite"></div></section>`;
       $('#bk').onclick = home;
@@ -2721,7 +2690,7 @@
         const rows = boardRows(), t = document.createElement('table'); t.className = 'board';
         t.innerHTML = '<thead><tr><th>#</th><th>Nama</th><th class="n">Bintang</th><th class="n">Poin</th><th></th></tr></thead>';
         const tb = document.createElement('tbody');
-        if (!rows.length) {const tr = tb.insertRow(), td = tr.insertCell(); td.colSpan = 5; td.textContent = 'Belum ada skor. Selesaikan satu level, atau tambahkan kode siswa.'; td.style.color = 'var(--muted)'}
+        if (!rows.length) {const tr = tb.insertRow(), td = tr.insertCell(); td.colSpan = 5; td.textContent = 'Belum ada skor. Selesaikan satu level dulu.'; td.style.color = 'var(--muted)'}
         rows.forEach((r, i) => {
           const nm = String(r.name || '?'), tr = tb.insertRow(), mine = nm.toLowerCase() === S.name.trim().toLowerCase();
           if (mine) tr.className = 'me';
@@ -2734,14 +2703,6 @@
         t.appendChild(tb); $('#bt').replaceChildren(t);
       }
       render();
-      $('#add').onclick = () => {
-        const res = importCodes($('#paste').value);
-        if (!res.total) {bf.className = 'fb bad'; bf.textContent = 'Tidak ada kode yang ditemukan. Kode diawali MKC~.'; return }
-        bf.className = 'fb ' + (res.ok ? 'ok' : 'bad');
-        bf.textContent = `${res.ok} skor ditambahkan` + (res.bad ? `, ${res.bad} kode tidak valid (mungkin terpotong atau diubah)` : '') + '.';
-        if (res.ok) $('#paste').value = '';
-        render();
-      };
       $('#cpb').onclick = async () => {
         const rows = boardRows();
         const txt = 'Leaderboard Misi Kucing Koder\n' + (rows.length ? rows.map((r, i) => `${i + 1}. ${r.name} - ${r.pts} poin, ${r.stars} bintang`).join('\n') : '(belum ada skor)');
@@ -2759,11 +2720,11 @@
     const esc = t => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
     function resultText() {
       const d = new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
-      return ['Misi Kucing Koder - KKA Kelas VIII', 'Nama: ' + (S.name || '-'), 'Tanggal: ' + d, '', ...LEVELS.map(l => `${l.id}. ${l.name}: ${S.stars[l.id] || 0}/3 bintang, ${S.pts[l.id] || 0} poin`), '', `Total: ${totalStars()}/18 bintang, ${totalPts()} poin`, ...(totalPts() && S.name.trim() ? ['', 'Kode setor ke guru:', makeCode()] : [])].join('\n');
+      return ['Misi Kucing Koder - KKA Kelas VIII', 'Nama: ' + (S.name || '-'), 'Tanggal: ' + d, '', ...LEVELS.map(l => `${l.id}. ${l.name}: ${S.stars[l.id] || 0}/3 bintang, ${S.pts[l.id] || 0} poin`), '', `Total: ${totalStars()}/18 bintang, ${totalPts()} poin`].join('\n');
     }
     function cardScreen() {
       teardown();
-      app.innerHTML = `<section class="card"><h2 class="ph" style="font-size:26px">Kartu hasil</h2><p style="color:var(--muted);margin:4px 0 12px">Salin teks ini lalu kirim ke gurumu. Kode setor di bagian bawah dipakai guru untuk memasukkan skormu ke leaderboard.</p>
+      app.innerHTML = `<section class="card"><h2 class="ph" style="font-size:26px">Kartu hasil</h2><p style="color:var(--muted);margin:4px 0 12px">Salin teks ini lalu kirim ke gurumu.</p>
     <div class="namerow" style="margin:0 0 12px"><label for="nm2">Nama Lengkap</label><input id="nm2" class="nm2" type="text" maxlength="40" placeholder="Tulis namamu" autocomplete="off" value="${esc(S.name)}"${locked() ? ' readonly' : ''}></div>
     <pre class="rc" id="rc"></pre><div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="cp">Salin hasil</button><button type="button" class="btn" id="bk">Kembali</button></div><div class="fb" id="cf" aria-live="polite"></div></section>`;
       const show = () => $('#rc').textContent = resultText(); show();
