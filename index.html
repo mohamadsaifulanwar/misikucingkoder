@@ -1847,8 +1847,8 @@
        Tempel URL Web App Google Apps Script di bawah ini agar leaderboard otomatis (tanpa login).
        Kosongkan ('') jika belum memasang leaderboard online (skor hanya tersimpan di perangkat ini). Panduan: PANDUAN-LEADERBOARD.md */
     const LB_URL = 'https://script.google.com/macros/s/AKfycbwMMmf1c4a4I-ZX-p1HlOtjo_pIDXFuplRjL6ANOxle8isDyDft5s29ifJ2UTWnm4NB4Q/exec';
-    const S = {stars: {}, pts: {}, name: '', session: '', board: [], kelas: '', kelasOk: ''};
-    try {const j = JSON.parse(localStorage.getItem('misi-kucing-koder') || '{}'); S.stars = j.stars || {}; S.pts = j.pts || {}; S.name = j.name || ''; S.session = j.session || ''; S.board = j.board || []; S.kelas = j.kelas || ''; S.kelasOk = j.kelasOk || ''} catch (e) { }
+    const S = {stars: {}, pts: {}, name: '', session: '', board: [], kelas: '', kelasOk: '', ver: ''};
+    try {const j = JSON.parse(localStorage.getItem('misi-kucing-koder') || '{}'); S.stars = j.stars || {}; S.pts = j.pts || {}; S.name = j.name || ''; S.session = j.session || ''; S.board = j.board || []; S.kelas = j.kelas || ''; S.kelasOk = j.kelasOk || ''; S.ver = j.ver || ''} catch (e) { }
     function save() {try {localStorage.setItem('misi-kucing-koder', JSON.stringify(S))} catch (e) { } }
     const totalPts = () => Object.values(S.pts).reduce((a, b) => a + b, 0);
     const totalStars = () => Object.values(S.stars).reduce((a, b) => a + b, 0);
@@ -2571,11 +2571,23 @@
     const kelasNorm = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
     const kelasKey = () => kelasNorm(S.kelas);
     const locked = () => totalPts() > 0;
-    function submitScore() {
+    const apiUrl = q => LB_URL + (LB_URL.includes('?') ? '&' : '?') + q + '&_=' + Date.now();
+    /* Nomor sesi dari server: naik setiap guru menekan Reset. Jika berbeda, progres di perangkat ini dikosongkan. */
+    function syncVer(v) {
+      if (v == null) return false; v = String(v);
+      if (!S.ver) {S.ver = v; save(); return false}
+      if (S.ver !== v) {S.stars = {}; S.pts = {}; S.ver = v; S.kelasOk = kelasKey(); save(); updHud(); return true}
+      return false;
+    }
+    async function submitScore() {
       upsertLocal();
       const n = S.name.trim(), k = kelasKey();
       if (!LB_URL || !n || !k || !totalPts()) return;
-      try {fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'set', kelas: k, nama: n, poin: totalPts(), bintang: totalStars()})}).catch(() => { })} catch (e) { }
+      try {
+        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k)))).json();
+        if (j && j.ok && syncVer(j.v)) {if (screen === 'home') home(); return}
+        await fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'set', kelas: k, nama: n, poin: totalPts(), bintang: totalStars(), v: S.ver})});
+      } catch (e) { }
     }
     async function requireName() {
       const m = $('#nmmsg'), say = t => {if (m) m.textContent = t};
@@ -2583,14 +2595,19 @@
       if (!LB_URL) return true;
       const k = kelasKey();
       if (!k) {say('Isi kode kelas dari gurumu dulu.'); const i = $('#kl'); if (i) i.focus(); return false}
-      if (S.kelasOk === k) return true;
       say('Memeriksa kode kelas...');
       try {
-        const res = await fetch(LB_URL + (LB_URL.includes('?') ? '&' : '?') + 'cek=' + encodeURIComponent(k) + '&_=' + Date.now());
-        const j = await res.json();
-        if (j && j.ok) {S.kelasOk = k; S.kelas = k; save(); say(''); return true}
+        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k)))).json();
+        if (j && j.ok) {
+          S.kelasOk = k; S.kelas = k; save();
+          if (syncVer(j.v)) {home(); const m2 = $('#nmmsg'); if (m2) m2.textContent = 'Leaderboard direset oleh guru. Progresmu dikosongkan, silakan mulai dari awal.'; return false}
+          say(''); return true;
+        }
         say('Kode kelas tidak dikenal. Tanyakan kode yang benar ke gurumu.');
-      } catch (e) {say('Kode belum bisa diperiksa. Periksa koneksi internet lalu coba lagi.')}
+      } catch (e) {
+        if (S.kelasOk === k) {say(''); return true}
+        say('Kode belum bisa diperiksa. Periksa koneksi internet lalu coba lagi.');
+      }
       const i = $('#kl'); if (i) i.focus(); return false;
     }
     function home() {
@@ -2612,11 +2629,11 @@
       $('#startBtn').onclick = () => {requireName().then(ok => {if (ok) intro(next || LEVELS[0])})};
       $('#cardBtn').onclick = cardScreen; $('#boardBtn').onclick = boardScreen;
       $('#nm').oninput = e => {S.name = e.target.value; save(); const m = $('#nmmsg'); if (m && S.name.trim()) m.textContent = ''};
-      const kl = $('#kl'); if (kl) {kl.oninput = e => {S.kelas = e.target.value; S.kelasOk = ''; save()}}
+      const kl = $('#kl'); if (kl) {kl.oninput = e => {S.kelas = e.target.value; S.kelasOk = ''; S.ver = ''; save()}}
       const np = $('#newp'); let armed = 0, tm = 0;
       np.onclick = () => {
         if (!armed) {armed = 1; np.textContent = 'Yakin? Progres perangkat ini dihapus'; np.classList.add('danger'); tm = setTimeout(() => {armed = 0; np.textContent = 'Pemain baru'; np.classList.remove('danger')}, 4000); return }
-        clearTimeout(tm); S.stars = {}; S.pts = {}; S.name = ''; S.kelasOk = ''; save(); home();
+        clearTimeout(tm); S.stars = {}; S.pts = {}; S.name = ''; S.kelasOk = ''; S.ver = ''; save(); home();
       };
     }
     function boardRows() {return S.board.slice().sort((a, b) => b.pts - a.pts || b.stars - a.stars || String(a.name).localeCompare(String(b.name)))}
@@ -2654,6 +2671,7 @@
         try {
           const res = await fetch(LB_URL + (LB_URL.includes('?') ? '&' : '?') + 'kelas=' + encodeURIComponent(kk) + '&_=' + Date.now());
           const j = await res.json(); if (dead) return;
+          if (kk === kelasKey() && S.name.trim() && syncVer(j.v)) {bf.className = 'fb ok'; bf.textContent = 'Leaderboard direset oleh guru. Progresmu di perangkat ini ikut dikosongkan.'}
           draw(Array.isArray(j.rows) ? j.rows : []); st.textContent = 'Kelas ' + kk + '. Diperbarui otomatis tiap 10 detik.';
         } catch (e) {if (!dead) st.textContent = 'Leaderboard belum bisa dimuat. Periksa koneksi internet atau URL Apps Script.'}
       }
