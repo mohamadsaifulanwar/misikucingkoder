@@ -2590,6 +2590,23 @@
       if (ch) {save(); updHud()} return ch;
     }
     const lvPayload = () => {const o = {}; LEVELS.forEach(l => {if (S.pts[l.id] || S.stars[l.id]) o[l.id] = [S.pts[l.id] || 0, S.stars[l.id] || 0]}); return o};
+    /* Cek sesi di latar belakang: dipakai di beranda supaya poin di header ikut ter-reset atau ter-update tanpa perlu klik apa pun. */
+    let lastCheck = 0, checking = false;
+    async function checkSession(force) {
+      if (!LB_URL || checking || screen !== 'home') return;
+      const n = S.name.trim(), k = kelasKey();
+      if (!n || !k || !S.kelasOk || (!force && Date.now() - lastCheck < 4000)) return;
+      checking = true; lastCheck = Date.now();
+      try {
+        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k) + '&nama=' + encodeURIComponent(n)))).json();
+        if (screen !== 'home' || !j || !j.ok) return;
+        if (syncVer(j.v)) {home(); const m = $('#nmmsg'); if (m) m.textContent = 'Leaderboard direset oleh guru. Progresmu dikosongkan, silakan mulai dari awal.'}
+        else if (mergeLv(j.lv)) {home(); const m = $('#nmmsg'); if (m) m.textContent = 'Progresmu diperbarui dari leaderboard (skor tertinggi per level).'}
+      } catch (e) { } finally {checking = false}
+    }
+    document.addEventListener('visibilitychange', () => {if (!document.hidden) checkSession()});
+    window.addEventListener('focus', () => checkSession());
+    setInterval(() => checkSession(), 15000);
     async function submitScore() {
       upsertLocal();
       const n = S.name.trim(), k = kelasKey();
@@ -2624,7 +2641,7 @@
       const i = $('#kl'); if (i) i.focus(); return false;
     }
     function home() {
-      teardown(); screen = 'home'; updHud();
+      teardown(); screen = 'home'; updHud(); setTimeout(() => checkSession(), 0);
       const next = LEVELS.find(l => !S.stars[l.id]);
       app.innerHTML = `<section class="hero"><div><h1>Misi Kucing Koder</h1>
     <p>Bantu si kucing menyelesaikan 5 level algoritma pemrograman, lalu uji semuanya di game penutup.</p>
