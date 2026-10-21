@@ -2579,14 +2579,26 @@
       if (S.ver !== v) {S.stars = {}; S.pts = {}; S.ver = v; S.kelasOk = kelasKey(); save(); updHud(); return true}
       return false;
     }
+    /* Gabungkan progres dari leaderboard (nama yang sama di perangkat lain): ambil yang tertinggi per level. */
+    function mergeLv(lv) {
+      if (!lv || typeof lv !== 'object') return false; let ch = false;
+      Object.keys(lv).forEach(id => {
+        const a = lv[id] || [], p = Number(a[0]) || 0, t = Number(a[1]) || 0;
+        if (p > (S.pts[id] || 0)) {S.pts[id] = p; ch = true}
+        if (t > (S.stars[id] || 0)) {S.stars[id] = t; ch = true}
+      });
+      if (ch) {save(); updHud()} return ch;
+    }
+    const lvPayload = () => {const o = {}; LEVELS.forEach(l => {if (S.pts[l.id] || S.stars[l.id]) o[l.id] = [S.pts[l.id] || 0, S.stars[l.id] || 0]}); return o};
     async function submitScore() {
       upsertLocal();
       const n = S.name.trim(), k = kelasKey();
       if (!LB_URL || !n || !k || !totalPts()) return;
       try {
-        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k)))).json();
+        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k) + '&nama=' + encodeURIComponent(n)))).json();
         if (j && j.ok && syncVer(j.v)) {if (screen === 'home') home(); return}
-        await fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'set', kelas: k, nama: n, poin: totalPts(), bintang: totalStars(), v: S.ver})});
+        if (j && j.ok && mergeLv(j.lv) && screen === 'home') home();
+        await fetch(LB_URL, {method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify({a: 'set', kelas: k, nama: n, poin: totalPts(), bintang: totalStars(), lv: lvPayload(), v: S.ver})});
       } catch (e) { }
     }
     async function requireName() {
@@ -2597,10 +2609,11 @@
       if (!k) {say('Isi kode kelas dari gurumu dulu.'); const i = $('#kl'); if (i) i.focus(); return false}
       say('Memeriksa kode kelas...');
       try {
-        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k)))).json();
+        const j = await (await fetch(apiUrl('cek=' + encodeURIComponent(k) + '&nama=' + encodeURIComponent(S.name.trim())))).json();
         if (j && j.ok) {
           S.kelasOk = k; S.kelas = k; save();
           if (syncVer(j.v)) {home(); const m2 = $('#nmmsg'); if (m2) m2.textContent = 'Leaderboard direset oleh guru. Progresmu dikosongkan, silakan mulai dari awal.'; return false}
+          if (mergeLv(j.lv)) {home(); const m3 = $('#nmmsg'); if (m3) m3.textContent = 'Progresmu dipulihkan dari leaderboard (skor tertinggi per level). Tekan Mulai untuk lanjut.'; return false}
           say(''); return true;
         }
         say('Kode kelas tidak dikenal. Tanyakan kode yang benar ke gurumu.');
@@ -2673,6 +2686,7 @@
           const res = await fetch(LB_URL + (LB_URL.includes('?') ? '&' : '?') + 'kelas=' + encodeURIComponent(kk) + '&_=' + Date.now());
           const j = await res.json(); if (dead) return;
           if (kk === kelasKey() && S.name.trim() && syncVer(j.v)) {bf.className = 'fb ok'; bf.textContent = 'Leaderboard direset oleh guru. Progresmu di perangkat ini ikut dikosongkan.'}
+          if (kk === kelasKey() && S.name.trim() && Array.isArray(j.rows)) {const me = j.rows.find(x => String(x.nama).toLowerCase() === S.name.trim().toLowerCase()); if (me && mergeLv(me.lv)) {bf.className = 'fb ok'; bf.textContent = 'Progresmu diperbarui dari leaderboard (skor tertinggi per level).'}}
           draw(Array.isArray(j.rows) ? j.rows : []); st.textContent = 'Kelas ' + kk + '. Diperbarui otomatis tiap 10 detik.';
         } catch (e) {if (!dead) st.textContent = 'Leaderboard belum bisa dimuat. Periksa koneksi internet atau URL Apps Script.'}
       }
@@ -2787,7 +2801,7 @@
       const msg = stars === 3 ? 'Hampir tanpa salah. Konsepnya sudah kuat.' : stars === 2 ? 'Bagus. Ulangi untuk mengejar bintang penuh.' : 'Selesai. Baca ringkasan level lalu coba lagi untuk bintang lebih banyak.';
       sfx.win();
       app.innerHTML = `<section class="card result">${starsHTML(stars)}<h2>${L.final ? 'Misi selesai!' : 'Level ' + L.id + ' selesai'}</h2>
-    <p>${msg}</p><div class="sum"><span class="pill">+${ctx.points} poin</span><span class="pill">${ctx.mistakes + (ctx.fails || 0)} kesalahan</span></div>
+    <p>${msg}</p><div class="sum"><span class="pill">+${ctx.points} poin</span>${S.pts[L.id] > ctx.points ? `<span class="pill">Terbaik: ${S.pts[L.id]} poin</span>` : ''}<span class="pill">${ctx.mistakes + (ctx.fails || 0)} kesalahan</span></div>
     <div class="row" style="justify-content:center;margin-top:6px" id="acts"></div></section>`;
       const acts = $('#acts');
       const add = (t, f, p) => {const b = h(`<button type="button" class="btn${p ? ' primary' : ''}">${t}</button>`); b.onclick = f; acts.appendChild(b)};
